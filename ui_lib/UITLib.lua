@@ -758,30 +758,31 @@ end
 			end
 			RegisterSearchable(Page, row, tname .. " " .. (desc or ""))
 
+			-- square checkbox: thick accent ring + inset solid accent fill when on
 			local Box = New("TextButton", {
 				BackgroundColor3 = Lib._theme.Input,
 				BackgroundTransparency = 1,
 				AnchorPoint = Vector2.new(1, 0.5),
-				Size = UDim2.new(0, 20, 0, 20),
+				Size = UDim2.new(0, 22, 0, 22),
 				Position = UDim2.new(1, -12, 0.5, 0),
 				Text = "",
 				AutoButtonColor = false,
 				BorderSizePixel = 0,
 			}, row)
-			Corner(Box, 4)
-			local boxStroke = Stroke(Box, Lib.Accent, 1.5)
+			Corner(Box, 5)
+			local boxStroke = Stroke(Box, Lib.Accent, 2)
 			track("accentStroke", boxStroke)
 
 			local Inner = New("Frame", {
 				BackgroundColor3 = Lib.Accent,
 				BackgroundTransparency = 0,
 				AnchorPoint = Vector2.new(0.5, 0.5),
-				Size = UDim2.new(0.65, 0, 0.65, 0),
+				Size = UDim2.new(0, 12, 0, 12),
 				Position = UDim2.new(0.5, 0, 0.5, 0),
 				BorderSizePixel = 0,
 				Visible = default,
 			}, Box)
-			Corner(Inner, 2)
+			Corner(Inner, 3)
 			track("accentBg", Inner)
 
 			local state = default
@@ -799,8 +800,8 @@ end
 				Lib.Flags[tname] = state
 				paint()
 				if state then
-					Inner.Size = UDim2.new(0.45, 0, 0.45, 0)
-					Tween(Inner, { Size = UDim2.new(0.65, 0, 0.65, 0) }, 0.15)
+					Inner.Size = UDim2.new(0, 7, 0, 7)
+					Tween(Inner, { Size = UDim2.new(0, 12, 0, 12) }, 0.15)
 				end
 				pcall(callback, state)
 			end
