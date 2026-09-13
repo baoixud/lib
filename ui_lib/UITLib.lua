@@ -39,6 +39,105 @@ Lib.Themes = {
 		SubText = Color3.fromRGB(170, 170, 182),
 		DimText = Color3.fromRGB(140, 140, 152),
 	},
+	Light = {
+		Main = Color3.fromRGB(238, 240, 244),
+		Panel = Color3.fromRGB(246, 247, 250),
+		Row = Color3.fromRGB(255, 255, 255),
+		Input = Color3.fromRGB(242, 243, 247),
+		Info = Color3.fromRGB(252, 252, 255),
+		Border = Color3.fromRGB(205, 208, 218),
+		Text = Color3.fromRGB(38, 40, 48),
+		SubText = Color3.fromRGB(112, 116, 128),
+		DimText = Color3.fromRGB(150, 154, 166),
+	},
+	Nord = {
+		Main = Color3.fromRGB(46, 52, 64),
+		Panel = Color3.fromRGB(59, 66, 82),
+		Row = Color3.fromRGB(67, 76, 94),
+		Input = Color3.fromRGB(54, 61, 76),
+		Info = Color3.fromRGB(76, 86, 106),
+		Border = Color3.fromRGB(94, 105, 128),
+		Text = Color3.fromRGB(236, 239, 244),
+		SubText = Color3.fromRGB(165, 175, 195),
+		DimText = Color3.fromRGB(136, 148, 170),
+	},
+	Ocean = {
+		Main = Color3.fromRGB(10, 20, 34),
+		Panel = Color3.fromRGB(14, 28, 46),
+		Row = Color3.fromRGB(18, 36, 58),
+		Input = Color3.fromRGB(13, 26, 42),
+		Info = Color3.fromRGB(22, 44, 70),
+		Border = Color3.fromRGB(48, 86, 122),
+		Text = Color3.fromRGB(225, 238, 250),
+		SubText = Color3.fromRGB(140, 165, 190),
+		DimText = Color3.fromRGB(110, 135, 160),
+	},
+	Forest = {
+		Main = Color3.fromRGB(16, 24, 18),
+		Panel = Color3.fromRGB(22, 32, 25),
+		Row = Color3.fromRGB(28, 41, 32),
+		Input = Color3.fromRGB(20, 30, 23),
+		Info = Color3.fromRGB(34, 50, 39),
+		Border = Color3.fromRGB(62, 90, 70),
+		Text = Color3.fromRGB(228, 242, 232),
+		SubText = Color3.fromRGB(152, 176, 158),
+		DimText = Color3.fromRGB(122, 146, 130),
+	},
+	Crimson = {
+		Main = Color3.fromRGB(24, 12, 14),
+		Panel = Color3.fromRGB(34, 17, 20),
+		Row = Color3.fromRGB(44, 22, 26),
+		Input = Color3.fromRGB(30, 15, 18),
+		Info = Color3.fromRGB(54, 27, 32),
+		Border = Color3.fromRGB(96, 42, 50),
+		Text = Color3.fromRGB(245, 230, 232),
+		SubText = Color3.fromRGB(186, 142, 148),
+		DimText = Color3.fromRGB(150, 112, 118),
+	},
+	Sakura = {
+		Main = Color3.fromRGB(34, 22, 28),
+		Panel = Color3.fromRGB(46, 30, 37),
+		Row = Color3.fromRGB(58, 38, 46),
+		Input = Color3.fromRGB(42, 27, 33),
+		Info = Color3.fromRGB(70, 45, 55),
+		Border = Color3.fromRGB(120, 76, 92),
+		Text = Color3.fromRGB(248, 235, 240),
+		SubText = Color3.fromRGB(202, 162, 176),
+		DimText = Color3.fromRGB(166, 132, 146),
+	},
+	Mocha = {
+		Main = Color3.fromRGB(30, 24, 20),
+		Panel = Color3.fromRGB(41, 33, 27),
+		Row = Color3.fromRGB(52, 42, 34),
+		Input = Color3.fromRGB(37, 30, 24),
+		Info = Color3.fromRGB(64, 52, 42),
+		Border = Color3.fromRGB(110, 90, 72),
+		Text = Color3.fromRGB(245, 238, 228),
+		SubText = Color3.fromRGB(192, 176, 158),
+		DimText = Color3.fromRGB(156, 142, 126),
+	},
+	Void = {
+		Main = Color3.fromRGB(5, 5, 7),
+		Panel = Color3.fromRGB(9, 9, 12),
+		Row = Color3.fromRGB(14, 14, 18),
+		Input = Color3.fromRGB(8, 8, 11),
+		Info = Color3.fromRGB(20, 20, 26),
+		Border = Color3.fromRGB(44, 44, 56),
+		Text = Color3.fromRGB(235, 235, 242),
+		SubText = Color3.fromRGB(135, 135, 148),
+		DimText = Color3.fromRGB(106, 106, 118),
+	},
+	Cyber = {
+		Main = Color3.fromRGB(8, 12, 14),
+		Panel = Color3.fromRGB(12, 18, 22),
+		Row = Color3.fromRGB(16, 25, 30),
+		Input = Color3.fromRGB(11, 17, 21),
+		Info = Color3.fromRGB(20, 32, 39),
+		Border = Color3.fromRGB(42, 72, 86),
+		Text = Color3.fromRGB(220, 248, 245),
+		SubText = Color3.fromRGB(132, 182, 186),
+		DimText = Color3.fromRGB(102, 146, 150),
+	},
 }
 
 Lib.Accents = {
@@ -1411,11 +1510,14 @@ end
 			Lib:SetAccent(opt.Color, opt.Name)
 		end)
 		S:AddSection("Theme")
+		local themeNames = {}
 		for name in pairs(Lib.Themes) do
-			S:AddButton(name .. ((name == Lib.ThemeName) and "  (on)" or ""), function()
-				Lib:SetTheme(name)
-			end)
+			table.insert(themeNames, name)
 		end
+		table.sort(themeNames)
+		S:AddDropdown("Theme", themeNames, Lib.ThemeName, function(v)
+			Lib:SetTheme(v)
+		end)
 		S:AddSection("Transparency")
 		local GlassSliders = {}
 		GlassSliders.main = S:AddSlider("Main Background", 0, 95, math.floor((Lib.Glass.main or 0) * 100 + 0.5), function(v)
