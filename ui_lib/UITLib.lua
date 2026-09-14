@@ -1373,41 +1373,49 @@ end
 					pcall(callback, choice)
 				end
 			end
-			for i, opt in ipairs(options) do
-				local b = New("TextButton", {
-					BackgroundColor3 = DROP_HOVER,
-					BackgroundTransparency = 1,
-					Size = UDim2.new(1, 0, 0, 32),
-					Font = Enum.Font.GothamBold,
-					TextSize = 13,
-					TextXAlignment = Enum.TextXAlignment.Left,
-					TextColor3 = Color3.fromRGB(255, 255, 255),
-					Text = "    " .. tostring(opt),
-					AutoButtonColor = false,
-					BorderSizePixel = 0,
-					ClipsDescendants = true,
-					LayoutOrder = i,
-				}, List)
-				Corner(b, 4)
-				optBtns[opt] = b
-				b.MouseEnter:Connect(function()
-					if opt == Lib.Flags[tname] then
-						b.BackgroundColor3 = DROP_SELECTED
-					else
-						b.BackgroundColor3 = DROP_HOVER
-					end
-					b.BackgroundTransparency = 0
-				end)
-				b.MouseLeave:Connect(function()
-					b.BackgroundTransparency = 1
-					paintOpts()
-				end)
-				b.MouseButton1Click:Connect(function()
-					apply(opt)
-					setOpen(false)
-				end)
+			local function buildOpts()
+				for _, b in pairs(optBtns) do
+					b:Destroy()
+				end
+				table.clear(optBtns)
+				openHeight = math.min(12 + (#options * 32) + (math.max(0, #options - 1) * 4), 200)
+				for i, opt in ipairs(options) do
+					local b = New("TextButton", {
+						BackgroundColor3 = DROP_HOVER,
+						BackgroundTransparency = 1,
+						Size = UDim2.new(1, 0, 0, 32),
+						Font = Enum.Font.GothamBold,
+						TextSize = 13,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextColor3 = Color3.fromRGB(255, 255, 255),
+						Text = "    " .. tostring(opt),
+						AutoButtonColor = false,
+						BorderSizePixel = 0,
+						ClipsDescendants = true,
+						LayoutOrder = i,
+					}, List)
+					Corner(b, 4)
+					optBtns[opt] = b
+					b.MouseEnter:Connect(function()
+						if opt == Lib.Flags[tname] then
+							b.BackgroundColor3 = DROP_SELECTED
+						else
+							b.BackgroundColor3 = DROP_HOVER
+						end
+						b.BackgroundTransparency = 0
+					end)
+					b.MouseLeave:Connect(function()
+						b.BackgroundTransparency = 1
+						paintOpts()
+					end)
+					b.MouseButton1Click:Connect(function()
+						apply(opt)
+						setOpen(false)
+					end)
+				end
+				paintOpts()
 			end
-			paintOpts()
+			buildOpts()
 			Head.MouseEnter:Connect(function()
 				Tween(Head, { BackgroundColor3 = Lib._theme.Input }, 0.12)
 			end)
@@ -1448,6 +1456,28 @@ end
 			end
 			function api:Get()
 				return Lib.Flags[tname]
+			end
+			function api:SetOptions(newOptions)
+				options = newOptions or {}
+				local cur = Lib.Flags[tname]
+				local found = false
+				for _, opt in ipairs(options) do
+					if tostring(opt) == tostring(cur) then
+						found = true
+						break
+					end
+				end
+				buildOpts()
+				if not found then
+					if #options > 0 then
+						apply(options[1], true)
+					else
+						Lib.Flags[tname] = nil
+						val.Text = "None"
+					end
+				elseif open then
+					Tween(Clip, { Size = UDim2.new(1, 0, 0, openHeight) }, 0.15)
+				end
 			end
 			function api:Open(v)
 				setOpen(v ~= false)
@@ -1554,9 +1584,49 @@ end
 		end)
 		S:AddSection("Config")
 		local Http = game:GetService("HttpService")
-		local function cfgPath()
-			return "UITLib_" .. tostring(game.PlaceId) .. ".json"
+		local CONFIG_PREFIX = "UITLib_" .. tostring(game.PlaceId) .. "_"
+		local AUTO_FILE = CONFIG_PREFIX .. "__auto.txt"
+
+		local function listConfigs()
+			local names = {}
+			if typeof(listfiles) == "function" then
+				local ok, files = pcall(listfiles, "")
+				if ok and type(files) == "table" then
+					for _, f in ipairs(files) do
+						local base = tostring(f):match("([^/\\]+)$") or tostring(f)
+						local name = base:match("^" .. CONFIG_PREFIX:gsub("(%W)", "%%%1") .. "(.+)%.json$")
+						if name and name ~= "__auto" then
+							table.insert(names, name)
+						end
+					end
+				end
+			end
+			-- Fall back to the legacy single config so old saves are not lost.
+			if #names == 0 and typeof(isfile) == "function" then
+				local legacy = "UITLib_" .. tostring(game.PlaceId) .. ".json"
+				local ok, exists = pcall(isfile, legacy)
+				if ok and exists then
+					table.insert(names, "default")
+				end
+			end
+			if #names == 0 then
+				names = { "default" }
+			end
+			table.sort(names)
+			return names
 		end
+
+		local function resolvePath(name)
+			if name == "default" and typeof(isfile) == "function" then
+				local legacy = "UITLib_" .. tostring(game.PlaceId) .. ".json"
+				local ok, exists = pcall(isfile, legacy)
+				if ok and exists then
+					return legacy
+				end
+			end
+			return CONFIG_PREFIX .. tostring(name) .. ".json"
+		end
+
 		local function flash(btn, text, revert)
 			btn.Text = text
 			task.delay(1.2, function()
@@ -1565,40 +1635,58 @@ end
 				end)
 			end)
 		end
-		local SaveBtn = S:AddButton("Save Config", function()
-			local data = {
-				flags = Lib.Flags,
-				accent = Lib.AccentName,
-				theme = Lib.ThemeName,
-				glass = Lib.Glass,
-				key = Lib.ToggleKey.Name,
-				scale = Lib.UIScale or 100,
-			}
-			local ok, json = pcall(Http.JSONEncode, Http, data)
-			if ok and json then
-				ok = pcall(writefile, cfgPath(), json)
-			end
-			flash(SaveBtn, ok and "Saved!" or "Save failed", "Save Config")
-		end)
-		local ScaleSlider
-		local LoadBtn = S:AddButton("Load Config", function()
-			local ok, content = pcall(readfile, cfgPath())
+
+		local selectedConfig = "default"
+		local suppressAutoSave = false
+		local autoSaveTimer = 0
+
+		local function readConfig(name)
+			local path = resolvePath(name)
+			local ok, content = pcall(readfile, path)
 			if not ok or not content or content == "" then
-				flash(LoadBtn, "No config found", "Load Config")
-				return
+				return nil, "No config found"
 			end
 			local ok2, data = pcall(Http.JSONDecode, Http, content)
 			if not ok2 or type(data) ~= "table" then
-				flash(LoadBtn, "Bad config", "Load Config")
-				return
+				return nil, "Bad config"
 			end
+			return data, path
+		end
+
+		local function writeConfig(name, data)
+			local ok, json = pcall(Http.JSONEncode, Http, data)
+			if not ok or not json then
+				return false
+			end
+			return pcall(writefile, resolvePath(name), json)
+		end
+
+		local function snapshotFlags()
+			local snap = {}
+			for k, v in pairs(Lib.Flags) do
+				local t = typeof(v)
+				if t == "boolean" or t == "string" or t == "number" then
+					snap[k] = v
+				elseif t == "Color3" then
+					snap[k] = { __color = true, r = v.R, g = v.G, b = v.B }
+				end
+			end
+			return snap
+		end
+
+		local function applyData(data)
 			if type(data.flags) == "table" then
 				for k, v in pairs(data.flags) do
+					if type(v) == "table" and v.__color then
+						v = Color3.new(tonumber(v.r) or 0, tonumber(v.g) or 0, tonumber(v.b) or 0)
+					end
 					local el = Lib.Elements[k]
 					if el then
 						pcall(function()
 							el:Set(v)
 						end)
+					else
+						Lib.Flags[k] = v
 					end
 				end
 			end
@@ -1632,7 +1720,185 @@ end
 					ScaleSlider:Set(math.clamp(math.floor(tonumber(data.scale)), 80, 120))
 				end)
 			end
-			flash(LoadBtn, "Loaded!", "Load Config")
+		end
+
+		local function collectData()
+			return {
+				flags = snapshotFlags(),
+				accent = Lib.AccentName,
+				theme = Lib.ThemeName,
+				glass = Lib.Glass,
+				key = Lib.ToggleKey.Name,
+				scale = Lib.UIScale or 100,
+			}
+		end
+
+		local function loadIntoUI(name)
+			local data, err = readConfig(name)
+			if not data then
+				return false, err
+			end
+			suppressAutoSave = true
+			applyData(data)
+			task.delay(0.5, function()
+				suppressAutoSave = false
+			end)
+			return true
+		end
+
+		local function getAutoName()
+			if typeof(isfile) ~= "function" then
+				return nil
+			end
+			local ok, exists = pcall(isfile, AUTO_FILE)
+			if not ok or not exists then
+				return nil
+			end
+			local ok2, content = pcall(readfile, AUTO_FILE)
+			if not ok2 or not content or content == "" then
+				return nil
+			end
+			return tostring(content):gsub("%s+", "")
+		end
+
+		local function setAutoName(name)
+			if typeof(writefile) ~= "function" then
+				return false
+			end
+			if not name or name == "" then
+				pcall(delfile, AUTO_FILE)
+				return true
+			end
+			return pcall(writefile, AUTO_FILE, tostring(name))
+		end
+
+		S:AddLabel("Configs are saved per game (PlaceId). Pick one from the list, or type a new name and hit Save.")
+		local ConfigDropdown
+		local ConfigNameBox
+		local AutoLoadToggle
+
+		local function refreshConfigList(keep)
+			local names = listConfigs()
+			local want = keep or selectedConfig
+			local found = false
+			for _, n in ipairs(names) do
+				if n == want then
+					found = true
+					break
+				end
+			end
+			if not found then
+				want = names[1]
+			end
+			selectedConfig = want
+			if ConfigDropdown then
+				ConfigDropdown:SetOptions(names)
+				ConfigDropdown:Set(want)
+			end
+			if ConfigNameBox then
+				ConfigNameBox:Set(want)
+			end
+			return names
+		end
+
+		ConfigDropdown = S:AddDropdown("Config", { "default" }, "default", function(v)
+			selectedConfig = tostring(v)
+			if ConfigNameBox then
+				ConfigNameBox:Set(selectedConfig)
+			end
+		end)
+		ConfigNameBox = S:AddTextbox("Config name", "default", function(v)
+			if v and v ~= "" then
+				selectedConfig = tostring(v)
+			end
+		end)
+		local SaveBtn = S:AddButton("Save Config", function()
+			if selectedConfig == "" then
+				flash(SaveBtn, "Name it first", "Save Config")
+				return
+			end
+			local ok = writeConfig(selectedConfig, collectData())
+			refreshConfigList(selectedConfig)
+			flash(SaveBtn, ok and ("Saved '" .. selectedConfig .. "'") or "Save failed", "Save Config")
+		end)
+		local ScaleSlider
+		local LoadBtn = S:AddButton("Load Config", function()
+			local ok, err = loadIntoUI(selectedConfig)
+			refreshConfigList(selectedConfig)
+			flash(LoadBtn, ok and ("Loaded '" .. selectedConfig .. "'") or tostring(err or "Load failed"), "Load Config")
+		end)
+		local DeleteBtn = S:AddButton("Delete Config", function()
+			local ok = pcall(delfile, resolvePath(selectedConfig))
+			if selectedConfig == getAutoName() then
+				setAutoName(nil)
+				if AutoLoadToggle then
+					AutoLoadToggle:Set(false)
+				end
+			end
+			refreshConfigList(nil)
+			flash(DeleteBtn, ok and "Deleted" or "Delete failed", "Delete Config")
+		end)
+		local RefreshBtn = S:AddButton("Refresh List", function()
+			refreshConfigList(selectedConfig)
+			flash(RefreshBtn, "Refreshed", "Refresh List")
+		end)
+		AutoLoadToggle = S:AddToggle("Auto Load Config", false, function(v)
+			if v then
+				setAutoName(selectedConfig)
+			else
+				if selectedConfig == getAutoName() then
+					setAutoName(nil)
+				end
+			end
+		end)
+		S:AddToggle("Auto Save (on change)", false, function(v)
+			Lib.AutoSaveEnabled = v
+			autoSaveTimer = 0
+		end)
+		S:AddLabel("Auto Load restores the chosen config next time the script runs. Auto Save writes it back a few seconds after you change anything.")
+		refreshConfigList("default")
+
+		-- Auto Load runs after every control exists, so restored toggles and
+		-- boxes actually paint instead of silently setting flags.
+		local autoName = getAutoName()
+		if autoName and autoName ~= "" then
+			refreshConfigList(autoName)
+			local ok = loadIntoUI(autoName)
+			if AutoLoadToggle and ok then
+				AutoLoadToggle:Set(true)
+			end
+		end
+
+		-- Auto Save watches for flag changes and writes back the auto config.
+		task.spawn(function()
+			local lastSig = ""
+			while Gui.Parent do
+				task.wait(1)
+				if Lib.AutoSaveEnabled and not suppressAutoSave then
+					local sig = ""
+					for k, v in pairs(Lib.Flags) do
+						sig = sig .. tostring(k) .. "=" .. tostring(v) .. ";"
+					end
+					if sig ~= lastSig then
+						if lastSig ~= "" then
+							autoSaveTimer = autoSaveTimer + 1
+							if autoSaveTimer >= 3 then
+								autoSaveTimer = 0
+								lastSig = sig
+								local target = getAutoName() or selectedConfig
+								writeConfig(target, collectData())
+							end
+						else
+							lastSig = sig
+						end
+					else
+						autoSaveTimer = 0
+					end
+				else
+					lastSig = ""
+					autoSaveTimer = 0
+				end
+			end
 		end)
 		S:AddSection("Window")
 		ScaleSlider = S:AddSlider("UI Scale", 80, 120, Lib.UIScale or 100, function(v)
