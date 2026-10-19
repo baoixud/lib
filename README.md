@@ -1,2 +1,1 @@
-## what the view
-<img src="https://count.getloli.com/get/@baoixud/lib?theme=booru-touhoulat" alt="moe counter" />
+**Please make an Pull Request or smth if u want completed the banana lib alot are missing**
